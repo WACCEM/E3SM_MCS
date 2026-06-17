@@ -1,0 +1,163 @@
+---
+# First-pass MCS tracking configuration for coarse (~100 km) model output
+# Tracking uses collocated Tb + precipitation following the MCSMIP protocol (https://doi.org/10.1029/2024JD042204)
+#
+# This file is intentionally conservative:
+# - it keeps the same basic model-input wiring as the 25 km example
+# - it raises size thresholds so they are meaningful on a 100 km grid
+# - it relaxes some duration/major-axis assumptions to avoid 1-pixel artifacts
+# Validate on a short sample period before using for production analyses.
+
+# Processing steps:
+run_idfeature : True
+run_tracksingle : True
+run_gettracks : True
+run_trackstats : True
+run_identifymcs : True
+run_matchpf : True
+run_robustmcs : True
+run_mapfeature : True
+run_speed : True
+
+# Parallel processing set up
+# run_parallel: 1 (local cluster), 2 (Dask MPI)
+run_parallel: 1
+nprocesses: 128
+dask_tmp_dir: /tmp
+timeout: 360
+
+# Start/end date and time
+startdate: 'STARTDATE'
+enddate: 'ENDDATE'
+
+# Input file name format
+time_format: yyyy-mo-dd
+databasename: ctl.fr.eam.h3.
+
+# Tracking input/output directories
+clouddata_path: /pscratch/sd/p/plma/e3sm_scratch/egu2025/ctl.fr/mcs/
+root_path: /pscratch/sd/f/feng045/E3SM_polun/E3SM_CTL/YEAR/
+tracking_path_name: tracking
+stats_path_name: stats
+pixel_path_name: mcstracking
+
+# Land mask file (optional)
+landmask_filename: /pscratch/sd/p/plma/e3sm_scratch/egu2025/ctl.fr/landfrac.nc
+landmask_varname: LANDFRAC
+landmask_x_dimname: lon
+landmask_y_dimname: lat
+landmask_x_coordname: lon
+landmask_y_coordname: lat
+landfrac_thresh: [0.9, 1]  # Define the range of fraction for land (depends on what value is land the landmask file)
+
+# Input dataset structure
+pixel_radius: 100.0  # [km] Approximate grid spacing for the input data
+area_method: latlon
+datatimeresolution: 1.0  # [hour]
+olr2tb: True
+pcp_convert_factor: 3600000.0
+olr_varname: FLNT
+pcp_varname: PRECT
+clouddatasource: model
+pfdatasource: model
+x_dimname: lon
+y_dimname: lat
+time_coordname: time
+time_dimname: time
+x_coordname: lon
+y_coordname: lat
+match_pixel_dt_thresh: 60.0  # [seconds]
+
+# Feature type
+feature_type: tb_pf
+
+# Cloud identification parameters
+mincoldcorepix: 1
+smoothwindowdimensions: 1  # Limit smoothing on a very coarse grid
+medfiltsize: 1
+geolimits: [-60, -360, 60, 360]
+area_thresh: 10000  # [km^2] Roughly one 100 km grid cell
+miss_thresh: 0.35
+cloudtb_core: 225.0  # [K]
+cloudtb_cold: 241.0  # [K]
+cloudtb_warm: 261.0  # [K]
+cloudtb_cloud: 261.0  # [K]
+absolutetb_threshs: [160, 350]
+warmanvilexpansion: 0
+cloudidmethod: label_grow
+
+# Link cloud objects using precipitation features
+linkpf: 1
+pf_smooth_window: 1
+pf_dbz_thresh: 1000  # [mm/hr] rain-rate threshold to link PF (set to a very high value to effectively disable PF linking)
+pf_link_area_thresh: 10000.0  # [km^2] Start near one coarse grid cell; retune if over-linking
+
+# Periodic boundary conditions
+pbc_direction: x    # (options: x, y, both, none)
+# Fraction to extend the domain to label features at the periodic boundary
+pbc_extended_fraction: 0.5    # (range: 0 to 1)
+# Fraction of the domain to wrap feature position 
+# If feature center movement between two time steps > max_domain_fraction * domain size,
+# the feature position will be wrapped to the other side of the domain
+pbc_max_domain_fraction: 0.5    # (range: 0 to 1)
+
+# Tracking parameters
+othresh: 0.5
+timegap: 3.1  # [hour]
+nmaxlinks: 200
+maxnclouds: 2000
+duration_range: [2, 100]
+duration_range_auto_update: True  # Auto-expand max_trackduration if data exceeds duration_range max
+duration_range_round_base: 10     # Round up to nearest multiple of this value when auto-updating
+remove_shorttracks: 1
+trackstats_dense_netcdf: 1
+
+# MCS Tb parameters
+# Keep the physical MCS scale threshold rather than scaling by pixel count.
+mcs_tb_area_thresh: 40000  # [km^2] First-pass coarse-grid threshold
+mcs_tb_duration_thresh: 4  # [hour] Slightly relaxed for coarse/smoothed fields
+mcs_tb_split_duration: 12
+mcs_tb_merge_duration: 12
+mcs_tb_gap: 1
+
+# MCS PF parameters
+mcs_pf_majoraxis_thresh: 200  # [km] Avoid classifying ~1-pixel PFs as MCS PFs
+max_pf_majoraxis_thresh: 4000  # [km]
+mcs_pf_durationthresh: 4  # [hour]
+mcs_pf_majoraxis_for_lifetime: 100  # [km]
+mcs_pf_gap: 1
+
+# Rain rate / PF parameters
+pf_rr_thres: 0.1  # [mm/hr]
+nmaxpf: 3
+nmaxcore: 20
+pcp_thresh: 0.1  # Pixels with hourly precipitation larger than this will be labeled with track number
+# Precipitation parameters that define an MCS (MCSMIP)
+heavy_rainrate_thresh:  2.0  # [mm/hr] Heavy rain rate threshold
+mcs_min_rainvol_thresh: 20000   #  [km^2 mm/h] Min rain volumne threshold
+mcs_volrain_duration_thresh: 1.0   # [hour] Min volume rain threshold
+
+# Tracked feature variable names
+feature_varname: feature_number
+nfeature_varname: nfeatures
+featuresize_varname: npix_feature
+
+# Track statistics output file dimension names
+tracks_dimname: tracks
+times_dimname: times
+pf_dimname: nmaxpf
+fillval: -9999
+
+# MCS track stats file base names
+mcstbstats_filebase: mcs_tracks_
+mcspfstats_filebase: mcs_tracks_pf_
+mcsrobust_filebase: mcs_tracks_robust_
+pixeltracking_filebase: mcstrack_
+mcsfinal_filebase: mcs_tracks_final_
+
+# Feature movement speed parameters
+lag_for_speed: 1
+track_number_for_speed: pcptracknumber
+track_field_for_speed: precipitation
+min_size_thresh_for_speed: 100  # [km]
+max_speed_thresh: 50  # [m/s]
