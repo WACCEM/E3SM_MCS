@@ -105,12 +105,12 @@ def parse_args():
     parser.add_argument(
         "--threads",
         type=int,
-        default=12,
+        default=24,
         help=(
             "TaskFarmer THREADS (concurrent tasks per node). "
-            "At ~6–7 GB peak per task, 12 tasks/node leaves comfortable headroom "
-            "on a 512 GB Perlmutter CPU node. Raise to 16-24 once profiling "
-            "confirms Dask streaming keeps peaks below ~8 GB."
+            "At ~2 GB peak per task, 48 tasks/node leaves comfortable headroom "
+            "on a 512 GB Perlmutter CPU node. Raise to 64-128 once profiling "
+            "confirms Dask streaming keeps peaks below ~3 GB."
         ),
     )
     parser.add_argument(

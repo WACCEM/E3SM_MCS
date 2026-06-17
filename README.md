@@ -3,7 +3,8 @@
 This repository contains scripts for tracking Mesoscale Convective Systems (MCS) in the
 **E3SM ne30 (~1° / 100 km) `ctl.fr` simulation** and the matching **IMERG 1° observational
 dataset**, following the MCSMIP Tb+precipitation protocol
-[(Feng et al. 2025 JGR)](<https://doi.org/10.1029/2024JD042204>). This is the coarse-resolution (1°) companion to the higher-resolution workflow in `scream/`.
+[(Feng et al. 2025 JGR)](<https://doi.org/10.1029/2024JD042204>). 
+This is the coarse-resolution (1°) companion to the higher-resolution workflow in `scream/`.
 
 ---
 
@@ -125,10 +126,9 @@ and produces a monthly MCS precipitation map file.
 
 **Output:** Monthly `mcs_rainmap_YYYYMM*.nc` files under `<root_path>/monthly/`
 
-**Peak memory:** ~6 GB per task (conservative upper bound based on SCREAM ne256 profiling;
-1° data is smaller). Default `THREADS=12` (concurrent tasks/node) is conservative — a 512
-GB Perlmutter node can safely run far more. Raise `--threads` to 24–48 for faster
-throughput.
+**Peak memory:** ~2 GB per task. Default `THREADS=48` (concurrent tasks/node) is 
+conservative — a 512 GB Perlmutter node can safely run far more. 
+Raise `--threads` to 64-128 for faster throughput.
 
 ```bash
 cd tracking/
@@ -139,7 +139,7 @@ python gen_e3sm_mcs_monthly_stats_taskfarmer.py
 # Custom date range, more threads, more nodes
 python gen_e3sm_mcs_monthly_stats_taskfarmer.py \
     --start-date 2005-01 --end-date 2010-12 \
-    --threads 24 --nodes 2
+    --threads 48 --nodes 2
 
 # Submit (must load taskfarmer module first)
 module load taskfarmer
