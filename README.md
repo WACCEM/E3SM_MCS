@@ -110,7 +110,9 @@ profiling the full pipeline on both datasets.
 
 ---
 
-### Step 2 — Monthly MCS precipitation maps (NERSC TaskFarmer)
+### Step 2 — Post-processing to MCS statistics
+
+#### Step 2a — Monthly MCS precipitation maps (NERSC TaskFarmer)
 
 **Scripts:** `tracking/gen_e3sm_mcs_monthly_stats_taskfarmer.py` (E3SM) /
 `tracking/gen_imerg_mcs_monthly_stats_taskfarmer.py` (OBS)
@@ -124,7 +126,7 @@ and produces a monthly MCS precipitation map file.
 **Input:** Per-year config YAMLs (from Step 1a) + pixel-tracking NetCDF files
 (`<root_path>/mcstracking/mcstrack_YYYYMM*.nc`)
 
-**Output:** Monthly `mcs_rainmap_YYYYMM*.nc` files under `<root_path>/monthly/`
+**Output:** Monthly `mcs_rainmap_YYYYMM*.nc` files under `<root_path>/stats/monthly/`
 
 **Peak memory:** ~2 GB per task. Default `THREADS=48` (concurrent tasks/node) is 
 conservative — a 512 GB Perlmutter node can safely run far more. 
@@ -153,7 +155,65 @@ sbatch slurm.submit_mcs_monthly_rainmap_IMERG.sh
 
 ---
 
-### Step 3 — Visualization: MCS tracking animations
+#### Step 2b — Monthly climatology from monthly data
+
+**Script:** `scripts/calc_mcs_rainmap_climo_from_monthly.py`
+
+**What it does:** Reads all monthly `mcs_rainmap_*.nc` files for a given date range,
+computes 12-month climatological means of total precipitation, MCS precipitation, MCS
+precipitation fraction, MCS precipitation frequency, MCS precipitation intensity, and MCS
+cloud frequency; also computes the interannual standard deviation of annual means for each
+variable.
+
+**Gathering monthly files across years:** After Step 2a, the monthly `mcs_rainmap_*.nc`
+files live under each year's `stats/monthly/` directory. Create a single `monthly/`
+directory under each data source and symlink (or copy) all years' files into it, so the
+climatology script can read them through one `--indir`:
+
+```bash
+# e.g. /pscratch/sd/f/feng045/E3SM_polun/E3SM_CTL/monthly
+#      /pscratch/sd/f/feng045/E3SM_polun/OBS/monthly
+cd <source>/monthly
+ln -s ../*/stats/monthly/mcs_rainmap_*.nc .
+```
+
+**Input:** Gathered monthly `mcs_rainmap_YYYYMM*.nc` files (Step 2a output)
+
+**Output:** `mcs_rainmap_monthly_climo_{YYYYMM}_{YYYYMM}.nc` in `--outdir`
+
+```bash
+# E3SM ctl.fr
+python scripts/calc_mcs_rainmap_climo_from_monthly.py \
+    --indir  /pscratch/sd/f/feng045/E3SM_polun/E3SM_CTL/monthly/ \
+    --outdir /pscratch/sd/f/feng045/E3SM_polun/E3SM_CTL/monthly/ \
+    --start-date 2001-01 --end-date 2020-12
+
+# OBS IMERG
+python scripts/calc_mcs_rainmap_climo_from_monthly.py \
+    --indir  /pscratch/sd/f/feng045/E3SM_polun/OBS/monthly/ \
+    --outdir /pscratch/sd/f/feng045/E3SM_polun/OBS/monthly/ \
+    --start-date 2007-01 --end-date 2020-12
+```
+
+---
+
+### Step 3 — Analysis and visualization
+
+#### `Notebooks/plot_global_mcs_climo_rainmap.ipynb`
+
+Plots **annual and seasonal mean MCS precipitation statistics** as global maps, comparing
+the E3SM ne30 ctl.fr simulation against IMERGv7 observations.
+
+- **Reads:** Monthly climatology files from Step 2b (`mcs_rainmap_monthly_climo_*.nc`) for
+  E3SM and OBS, an ERA5 topography file (`era5_orography.nc`), and the MergedIR valid-data
+  mask (`merg_valid_fraction_*.nc`).
+- **Grid handling:** IMERG longitudes (−180–180) are rolled to start at 0° and relabeled
+  to the E3SM 0.5–359.5 grid so the two 120×360 datasets concat/plot together.
+- **Produces:** Multi-panel maps of MCS precipitation frequency, MCS precipitation, and MCS
+  precipitation fraction (annual + per-season DJF/MAM/JJA/SON), plus their interannual-std
+  versions, saved to `/global/cfs/cdirs/m1867/zfeng/E3SM_polun/figures/`.
+
+#### MCS tracking animations
 
 **Scripts:** `scripts/make_mcs_animation_e3sm.py` (driver) +
 `scripts/plot_subset_tbpf_mcs_tracks_demo.py` (plotting worker)
