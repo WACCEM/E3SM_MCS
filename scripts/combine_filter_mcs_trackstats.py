@@ -23,7 +23,7 @@ Output filename (auto-derived):
 
 Usage
 -----
-SCREAM, tropics, 2001-2020:
+E3SM, tropics, 2001-2020:
     python combine_filter_mcs_trackstats.py \\
         --indir /pscratch/sd/f/feng045/E3SM_polun/E3SM_CTL/stats \\
         --region tropics --start-year 2001 --end-year 2020

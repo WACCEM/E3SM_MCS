@@ -139,7 +139,7 @@ nmaxpf: 3
 nmaxcore: 20
 pcp_thresh: 0.1  # Pixels with hourly precipitation larger than this will be labeled with track number
 # Precipitation parameters that define an MCS (MCSMIP)
-heavy_rainrate_thresh:  2.0  # [mm/hr] Heavy rain rate threshold
+heavy_rainrate_thresh:  1.5  # [mm/hr] Heavy rain rate threshold
 mcs_min_rainvol_thresh: 20000   #  [km^2 mm/h] Min rain volumne threshold
 mcs_volrain_duration_thresh: 1.0   # [hour] Min volume rain threshold
 
