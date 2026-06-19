@@ -197,6 +197,40 @@ python scripts/calc_mcs_rainmap_climo_from_monthly.py \
 
 ---
 
+#### Step 2c — Combine and filter MCS track statistics
+
+**Script:** `scripts/combine_filter_mcs_trackstats.py`
+
+**What it does:** Reads yearly `mcs_tracks_final_*.nc` files, filters tracks whose
+lifetime-mean location falls within a named bounding box (tropics or global), flattens
+the jagged `(tracks × times)` arrays to a tidy one-row-per-timestep DataFrame (skipping
+fill-padded entries), assigns globally unique track indices across all years, and writes a
+single compressed Parquet file. This pre-flattening step makes notebook analysis much
+faster than opening the raw NetCDF files.
+
+**Input:** Yearly `mcs_tracks_final_*.nc` files in `<root_path>/stats/`
+
+**Output:** `mcs_tracks_final_combined_{region}_{start_year}_{end_year}.parquet` (written
+to `--outdir`, default `--indir`)
+
+```bash
+# E3SM ctl.fr, tropics (20°S–20°N)
+python scripts/combine_filter_mcs_trackstats.py \
+    --indir  /pscratch/sd/f/feng045/E3SM_polun/E3SM_CTL/stats \
+    --region tropics --start-year 2001 --end-year 2020
+
+# OBS IMERG, tropics (20°S–20°N)
+python scripts/combine_filter_mcs_trackstats.py \
+    --indir  /pscratch/sd/f/feng045/E3SM_polun/OBS/stats \
+    --region tropics --start-year 2007 --end-year 2020
+
+# Available regions: tropics (20°S–20°N), global (90°S–90°N)
+# Override bounds with --latmin/--latmax/--lonmin/--lonmax
+# Override the input glob with --pattern (default: *mcs_tracks_final_*.nc)
+```
+
+---
+
 ### Step 3 — Analysis and visualization
 
 #### `Notebooks/plot_global_mcs_climo_rainmap.ipynb`
@@ -212,6 +246,39 @@ the E3SM ne30 ctl.fr simulation against IMERGv7 observations.
 - **Produces:** Multi-panel maps of MCS precipitation frequency, MCS precipitation, and MCS
   precipitation fraction (annual + per-season DJF/MAM/JJA/SON), plus their interannual-std
   versions, saved to `/global/cfs/cdirs/m1867/zfeng/E3SM_polun/figures/`.
+
+#### `Notebooks/plot_global_mcs_tracks_map.ipynb`
+
+Plots **MCS number-density and initiation-count maps** as global maps, comparing the E3SM
+ne30 ctl.fr simulation against IMERGv7 observations (annual + per-season DJF/MAM/JJA/SON).
+
+- **Reads:** Yearly `mcs_tracks_final_*.nc` track-statistics files directly from
+  `<root_path>/stats/` (Step 1a output) for E3SM and OBS, plus the ERA5 topography file and
+  the MergedIR valid-data mask.
+- **Computes:** Each unique MCS is counted once per 1° grid cell over its lifetime
+  (`count_unique_mcs`); initiation counts use a coarser 3° grid based on each track's first
+  timestep, excluding tracks born from a split. IMERG longitudes are converted from
+  −180–180 to 0–360 (`% 360`) to match E3SM's convention.
+- **Produces:** 3-panel (OBS / E3SM / E3SM−OBS difference) Robinson-projection maps of MCS
+  track density and initiation density, saved to
+  `/global/cfs/cdirs/m1867/zfeng/E3SM_polun/figures/`.
+
+#### `Notebooks/plot_tropical_mcs_trackstats_land_ocean.ipynb`
+
+Compares **tropical MCS lifetime statistics** between IMERG observations and E3SM model
+output, separated by land vs. ocean tracks.
+
+- **Reads:** Combined Parquet files produced in Step 2c
+  (`mcs_tracks_final_combined_tropics_*.parquet`) for E3SM and OBS — edit the `SOURCES`
+  dict at the top of the notebook (paths + per-source year range, which must match the
+  filename written by Step 2c).
+- **Produces:** Box-whisker/violin plots of per-track lifetime statistics (CCS/PF area,
+  rain rate, brightness temperature, movement speed, etc.) split by land/ocean
+  classification, composite time-evolution line plots of track properties by
+  track-duration bin, and a Mann-Whitney U significance table (mean % difference vs.
+  IMERG), saved to `/global/cfs/cdirs/m1867/zfeng/E3SM_polun/figures/`.
+- The `scripts/combine_filter_mcs_trackstats.py` pre-processing step (Step 2c) must be
+  run before running this notebook.
 
 #### MCS tracking animations
 
